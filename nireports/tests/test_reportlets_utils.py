@@ -64,6 +64,29 @@ def test_compute_crop_slices_returns_none_without_positive(tmp_path, monkeypatch
     assert result == tuple(slice(0, dim) for dim in img.shape[:3])
 
 
+def test_compute_crop_slices_with_foreground():
+    # Create a 10x10x10 volume with a localized bright cube in the middle
+    data = np.zeros((10, 10, 10), dtype=np.float32)
+    data[3:7, 3:7, 3:7] = 100.0
+
+    img = nb.Nifti1Image(data, np.eye(4))
+
+    # This will exercise the coords, start, and end calculation lines
+    slices = _compute_crop_slices(img)
+
+    # Assertions to verify correct bounding-box extraction
+    assert isinstance(slices, tuple)
+    assert len(slices) == 3
+    # compute_epi_mask expands/smooths slightly, so check that it wraps
+    # the [3:7] block safely
+    assert slices[0].start <= 3
+    assert slices[0].stop >= 7
+    assert slices[1].start <= 3
+    assert slices[1].stop >= 7
+    assert slices[2].start <= 3
+    assert slices[2].stop >= 7
+
+
 def test_merge_crop_slices_uses_union():
     merged = merge_crop_slices(
         (slice(2, 8), slice(4, 9), slice(1, 5)),
