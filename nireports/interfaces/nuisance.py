@@ -309,7 +309,7 @@ class MotionCorrectionConfoundsPlot(SimpleInterface):
                 newpath=runtime.cwd,
             )
         else:
-            self._results["out_file"] = os.path.abspath(self.inputs.out_file)
+            self._results["out_file"] = Path(self.inputs.out_file).resolve()
 
         svg_content = plot_motion_correction_confounds_cine(
             load_api(self.inputs.uncorr_file, SpatialImage),
