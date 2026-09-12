@@ -614,8 +614,7 @@ def _compute_crop_slices(img: nb.spatialimages.SpatialImage) -> tuple[slice, sli
         positive = data[data > 0]
         if positive.size == 0:
             return None
-        threshold = float(np.percentile(positive, 80))
-        mask_data = data > threshold
+        mask_data = data > np.percentile(positive, 80)
 
     mask_data = _largest_connected_component(mask_data)
 
@@ -627,35 +626,6 @@ def _compute_crop_slices(img: nb.spatialimages.SpatialImage) -> tuple[slice, sli
     end = coords.max(axis=1) + 1
     crop_slices = tuple(slice(int(s), int(e)) for s, e in zip(start, end))
     return cast(tuple[slice, slice, slice], crop_slices)
-
-
-def crop_img(
-    img: nb.spatialimages.SpatialImage, crop_slices: tuple[slice, slice, slice] | None
-) -> nb.spatialimages.SpatialImage:
-    """Crop a spatial image and update its affine translation accordingly.
-
-    Parameters
-    ----------
-    img : :obj:`~nibabel.spatialimages.SpatialImage`
-        Input image to crop.
-    crop_slices : :obj:`tuple` of :obj:`slice` or ``None``
-        Cropping slices in ``(x, y, z)`` order. If ``None``, the input image is
-        returned unchanged.
-
-    Returns
-    -------
-    :obj:`~nibabel.spatialimages.SpatialImage`
-        Cropped image with affine origin shifted to preserve world coordinates.
-    """
-
-    if crop_slices is None:
-        return img
-
-    data = np.asanyarray(img.dataobj)[crop_slices]
-    affine = img.affine.copy()
-    starts = np.array([slc.start or 0 for slc in crop_slices])
-    affine[:3, 3] += affine[:3, :3] @ starts
-    return img.__class__(data, affine, img.header)
 
 
 def merge_crop_slices(
@@ -685,7 +655,7 @@ def merge_crop_slices(
     for first_slc, second_slc in zip(first, second):
         start = min(first_slc.start or 0, second_slc.start or 0)
         stop = max(first_slc.stop or 0, second_slc.stop or 0)
-        merged.append(slice(start, stop))
+        merged.append(slice(start, stop or None))
 
     merged_tuple = tuple(merged)
     return cast(tuple[slice, slice, slice], merged_tuple)
@@ -725,15 +695,14 @@ def compute_display_params(
     if img.ndim == 3:
         mid_img = img
     else:
-        mid_img = nlimage.index_img(img, img.shape[-1] // 2)
+        mid_img = img.slicer[..., img.shape[-1] // 2]
 
     if crop_slices is None:
         crop_slices = _compute_crop_slices(mid_img)
 
-    cropped_mid = crop_img(mid_img, crop_slices)
+    cropped_mid = mid_img.slicer[crop_slices]
     data = cropped_mid.get_fdata().astype(float)
-    vmax = float(np.percentile(data.flatten(), 99.9))
-    vmin = float(np.percentile(data.flatten(), 80))
+    vmin, vmax = np.percentile(data, (80, 99.9))
     cut_coords = find_xyz_cut_coords(cropped_mid)
 
     return cropped_mid, cut_coords, vmin, vmax, crop_slices
@@ -840,8 +809,8 @@ def render_comparison_frames(
             uncorr_png = Path(tmpdir) / f"uncorr_{idx:04d}.png"
             corr_png = Path(tmpdir) / f"corr_{idx:04d}.png"
 
-            uncorr_frame = crop_img(nlimage.index_img(uncorr_img, idx), crop_slices)
-            corr_frame = crop_img(nlimage.index_img(corr_img, idx), crop_slices)
+            uncorr_frame = uncorr_img.slicer[*crop_slices, idx]
+            corr_frame = corr_img.slicer[*crop_slices, idx]
             plot_epi(
                 uncorr_frame,
                 cut_coords=cut_coords_uncorr,

@@ -65,33 +65,6 @@ def test_compute_crop_slices_returns_none_without_positive(tmp_path, monkeypatch
     assert result is None
 
 
-def test_crop_img_adjusts_affine():
-    data = np.ones((4, 4, 4), dtype=float)
-    affine = np.diag([2.0, 3.0, 4.0, 1.0])
-    img = nb.Nifti1Image(data, affine)
-
-    cropped = crop_img(img, (slice(1, 3), slice(0, 2), slice(2, 4)))
-
-    assert np.allclose(cropped.affine[:3, 3], [2.0, 0.0, 8.0])
-
-
-def test_crop_img_adjusts_affine_for_oriented_image():
-    data = np.ones((4, 4, 4), dtype=float)
-    affine = np.array(
-        [
-            [0.0, -2.0, 0.0, 0.0],
-            [2.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 3.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
-    )
-    img = nb.Nifti1Image(data, affine)
-
-    cropped = crop_img(img, (slice(1, 3), slice(0, 2), slice(2, 4)))
-
-    assert np.allclose(cropped.affine[:3, 3], [0.0, 2.0, 6.0])
-
-
 def test_merge_crop_slices_uses_union():
     merged = merge_crop_slices(
         (slice(2, 8), slice(4, 9), slice(1, 5)),
@@ -151,8 +124,9 @@ def test_compute_common_display_params_calls_helpers(monkeypatch):
 
 def test_render_comparison_frames(monkeypatch):
     n_frames = 2
-    uncorr_img = object()
-    corr_img = object()
+    affine = np.eye(4)
+    uncorr_img = nb.Nifti1Image(np.zeros((4, 4, 4, n_frames)), affine)
+    corr_img = nb.Nifti1Image(np.zeros((4, 4, 4, n_frames)), affine)
 
     # Capture calls to ensure plotting invoked per frame and side
     plot_calls = []
@@ -179,18 +153,8 @@ def test_render_comparison_frames(monkeypatch):
             }
         )
 
-    # index_img returns frame token we can inspect later
-    def fake_index_img(img, idx):
-        return f"indexed-{id(img)}-{idx}"
-
-    # crop_img wraps token so we can verify it's being called
-    def fake_crop_img(indexed, crop_slices):
-        return f"cropped({indexed})"
-
     monkeypatch.setattr("nireports.reportlets.utils.iio.imread", fake_imread)
     monkeypatch.setattr("nireports.reportlets.utils.plot_epi", fake_plot_epi)
-    monkeypatch.setattr("nireports.reportlets.utils.nlimage.index_img", fake_index_img)
-    monkeypatch.setattr("nireports.reportlets.utils.crop_img", fake_crop_img)
 
     frames = render_comparison_frames(
         uncorr_img,
