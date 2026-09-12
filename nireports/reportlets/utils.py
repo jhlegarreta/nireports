@@ -612,8 +612,7 @@ def _compute_crop_slices(img: nb.spatialimages.SpatialImage) -> tuple[slice, sli
 
     try:
         mask_img = compute_epi_mask(img)
-        mask_data = np.asanyarray(mask_img.dataobj) > 0
-    except Exception:
+    except (ValueError, RuntimeError):
         data = np.asanyarray(img.dataobj)
         positive = data[data > 0]
         # Return fallback solution if no positive values were found
@@ -625,6 +624,9 @@ def _compute_crop_slices(img: nb.spatialimages.SpatialImage) -> tuple[slice, sli
             mask_data = np.ones(data.shape, dtype=bool)
         else:
             mask_data = data > threshold
+    else:
+        # Executed if compute_epi_mask succeeds without raising an error
+        mask_data = np.asanyarray(mask_img.dataobj) > 0
 
     mask_data = _largest_connected_component(mask_data)
 
