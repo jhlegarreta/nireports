@@ -808,8 +808,13 @@ def render_comparison_frames(
             uncorr_png = Path(tmpdir) / f"uncorr_{idx:04d}.png"
             corr_png = Path(tmpdir) / f"corr_{idx:04d}.png"
 
-            uncorr_frame = uncorr_img.slicer[*crop_slices, idx]
-            corr_frame = corr_img.slicer[*crop_slices, idx]
+            if crop_slices is not None:
+                frame_idx = (*crop_slices, idx)
+            else:
+                # Handle the None case using default full-range slices or a fallback
+                frame_idx = (slice(None), slice(None), slice(None), idx)
+            uncorr_frame = uncorr_img.slicer[frame_idx]
+            corr_frame = corr_img.slicer[frame_idx]
             plot_epi(
                 uncorr_frame,
                 cut_coords=cut_coords_uncorr,
