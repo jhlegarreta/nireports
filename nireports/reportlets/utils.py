@@ -433,7 +433,7 @@ def _compose_view(
     with TemporaryDirectory() as tmpdirname:
         out_file = Path(tmpdirname) / "tmp.svg"
         fig.save(str(out_file))
-        # Post processing
+        # Post-processing
         svg = out_file.read_text().splitlines()
 
     # Remove <?xml... line
@@ -853,6 +853,7 @@ def render_comparison_frames(
             uncorr_arr = np.asarray(iio.imread(uncorr_png))
             corr_arr = np.asarray(iio.imread(corr_png))
 
+            # Padding logic
             max_height = max(uncorr_arr.shape[0], corr_arr.shape[0])
             if uncorr_arr.shape[0] < max_height:
                 uncorr_pad_rows: int = int(max_height - uncorr_arr.shape[0])
