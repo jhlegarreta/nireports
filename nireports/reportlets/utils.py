@@ -337,7 +337,6 @@ def _3d_in_file(
     if in_file is a list of files, return an arbitrary file from
     the list, and an arbitrary volume from that file
     """
-    from nilearn import image as nlimage
 
     if isinstance(in_file, list):
         in_file = in_file[0]

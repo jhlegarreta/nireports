@@ -30,7 +30,6 @@ from nireports.reportlets.utils import (
     _largest_connected_component,
     compute_common_display_params,
     compute_display_params,
-    crop_img,
     load_framewise_displacement,
     merge_crop_slices,
     render_comparison_frames,
