@@ -585,13 +585,15 @@ def _largest_connected_component(mask_data: np.ndarray) -> np.ndarray:
     return labeled == largest
 
 
-def _compute_crop_slices(img: nb.spatialimages.SpatialImage) -> tuple[slice, slice, slice] | None:
+def _compute_crop_slices(img: nb.spatialimages.SpatialImage) -> tuple[slice, slice, slice]:
     """Compute tight 3D crop slices around foreground signal in an image.
 
     Foreground is estimated using :func:`nilearn.masking.compute_epi_mask` when
     available. If mask computation fails, a fallback threshold-based mask is
     computed from positive intensities (> 80th percentile). The largest connected
-    component is then selected before deriving bounding-box slices.
+    component is then selected before deriving bounding-box slices. If no
+    positive values are found or no foreground can be identified, fallback to
+    the entire volume.
 
     Parameters
     ----------
@@ -600,10 +602,13 @@ def _compute_crop_slices(img: nb.spatialimages.SpatialImage) -> tuple[slice, sli
 
     Returns
     -------
-    :obj:`tuple` of :obj:`slice` or ``None``
-        Cropping slices in ``(x, y, z)`` order, or ``None`` when no foreground
-        region can be identified.
+    :obj:`tuple` of :obj:`slice`
+        Cropping slices in ``(x, y, z)`` order.
     """
+    # Full-volume fallback
+    fallback_slices = cast(
+        tuple[slice, slice, slice], tuple(slice(0, dim) for dim in img.shape[:3])
+    )
 
     try:
         mask_img = compute_epi_mask(img)
@@ -611,14 +616,21 @@ def _compute_crop_slices(img: nb.spatialimages.SpatialImage) -> tuple[slice, sli
     except Exception:
         data = np.asanyarray(img.dataobj)
         positive = data[data > 0]
+        # Return fallback solution if no positive values were found
         if positive.size == 0:
-            return None
-        mask_data = data > np.percentile(positive, 80)
+            return fallback_slices
+        threshold = np.percentile(positive, 80)
+        # If all values are identical, skip the percentile and keep everything
+        if np.all(positive == threshold):
+            mask_data = np.ones(data.shape, dtype=bool)
+        else:
+            mask_data = data > threshold
 
     mask_data = _largest_connected_component(mask_data)
 
+    # Return fallback solution if no foreground can be found
     if not mask_data.any():
-        return None
+        return fallback_slices
 
     coords = np.array(np.where(mask_data))
     start = coords.min(axis=1)

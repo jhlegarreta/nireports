@@ -61,7 +61,7 @@ def test_compute_crop_slices_returns_none_without_positive(tmp_path, monkeypatch
 
     result = _compute_crop_slices(nb.load(str(img_path)))
 
-    assert result is None
+    assert result == tuple(slice(0, dim) for dim in img.shape[:3])
 
 
 def test_merge_crop_slices_uses_union():
