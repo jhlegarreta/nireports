@@ -11,7 +11,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Image Recognition",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -19,7 +18,7 @@ classifiers = [
 ]
 license = "Apache-2.0 AND MIT"
 license-files = ["LICENSE", "nireports/_vendored/LICENSES/LICENSE.svgutils.txt"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "acres >= 0.2",
     "matplotlib >= 3.6",
