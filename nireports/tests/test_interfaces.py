@@ -207,6 +207,7 @@ def test_build_animation_includes_fd_plot(tmp_path, monkeypatch):
         def savefig(self, buf, **kwargs):
             array = np.ones((8, 8, 3), dtype=np.uint8) * 255
             import imageio.v3 as iio
+
             buf.write(iio.imwrite("<bytes>", array, extension=".png"))
 
     class MockAxes:
